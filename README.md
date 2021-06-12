@@ -1,5 +1,5 @@
 ## SVG-Anim-Kivy
-*SVG path animation in kivy*
+*Support for SVG in Kivy*
 
 #
 
@@ -8,6 +8,26 @@
 
 #
 
+### No more dependency on png - works out of the box for svg
+Now you can take some of the advantages svg offers in your kivy apps. Those are:
+- [x] Compact file size compare to other formats
+- [x] Scalability
+- [x] And some animation( Path animation )
+#
+### How to use?
+*Easy and Straightforward*
+
+* Added option to draw image without animation, `animate=False`
+* Added option to draw empty or filled path, `fill=True` or `fill=False`
+
+
+```python
+s = SVGAnimation(widget_to_draw_svg_upon)
+
+# call draw method with a `svg_file` name
+s.draw("github.svg", fill=True, animate=True)
+
+```
 ### Requirement other than Kivy
 * svg.path
 
@@ -20,13 +40,5 @@
 * Go to `src`: `cd src`
 * Run it: `python demo.py`
 
-### How to use?
-*Easy and Straightforward*
-```python
-s = SVGAnimation(widget_to_draw_svg_upon)
-
-# call animate method with a `svg_file` name
-s.animate("github.svg")
-```
 #
 #### PS: Try not to use very complex SVGs as they may degrade the performance

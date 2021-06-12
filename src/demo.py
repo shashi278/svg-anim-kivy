@@ -23,59 +23,76 @@ BoxLayout:
         spacing: dp(root.width/40)
 
         MYMDIconButton:
-            icon: "icons/kivy.png"
+            svg_icon: "icons/kivy.svg"
         
         MYMDIconButton:
-            icon: "icons/python2.png"
+            svg_icon: "icons/python2.svg"
         
         MYMDIconButton:
-            icon: "icons/github3.png"
+            svg_icon: "icons/github3.svg"
         
         MYMDIconButton:
-            icon: "icons/github.png"
+            svg_icon: "icons/github.svg"
         
         MYMDIconButton:
-            icon: "icons/sublime.png"
+            svg_icon: "icons/sublime.svg"
         
         MYMDIconButton:
-            icon: "icons/discord.png"
+            svg_icon: "icons/discord2.svg"
         
         MYMDIconButton:
-            icon: "icons/so.png"
+            svg_icon: "icons/so.svg"
         
         MYMDIconButton:
-            icon: "icons/travis.png"
+            svg_icon: "icons/text2.svg"
         
         MYMDIconButton:
-            icon: "icons/twitter2.png"
+            svg_icon: "icons/twitter2.svg"
         
         MYMDIconButton:
-            icon: "icons/google3.png"
+            svg_icon: "icons/google3.svg"
         
         MYMDIconButton:
-            icon: "icons/facebook2.png"
+            svg_icon: "icons/pie-chart.svg"
         
         MYMDIconButton:
-            icon: "icons/instagram2.png"
+            svg_icon: "icons/facebook2.svg"
 
 <MYMDIconButton@MDIconButton>:
+    on_press: app.draw_path(self.s, self.svg_icon)
     on_release:
-        app.animate(self.icon.split(".")[0]+".svg")
+        app.draw_filled(self.s, self.svg_icon);app.animate(self.svg_icon.split(".")[0]+".svg")
 
 """
+
+import threading
 
 
 class SVGAnimationDemo(MDApp):
     def build(self):
-        root = Builder.load_string(kv)
-        self.s = SVGAnimation(root.ids.svg_area)
-        return root
+        self.root = Builder.load_string(kv)
+        self.s = SVGAnimation(self.root.ids.svg_area)
+        return self.root
+
+    def show_button_icon(self, *args):
+        grid = self.root.ids.button_area
+        for b in grid.children:
+            s = SVGAnimation(b)
+            setattr(b, "s", s)
+            self.draw_filled(s, b.svg_icon)
+
+    def draw_filled(self, s, icon):
+        s.draw(icon)
+
+    def draw_path(self, s, icon):
+        s.draw(icon, fill=False, line_width=1)
 
     def on_start(self):
-        Clock.schedule_once(lambda *args: self.animate("icons/text2.svg"), 1)
+        t = threading.Thread(target=self.show_button_icon)
+        Clock.schedule_once(lambda *args: t.start())
 
     def animate(self, svg_file):
-        self.s.animate(svg_file)
+        self.s.draw(svg_file, fill=True, animate=False, line_width=1)
 
 
 if __name__ == "__main__":

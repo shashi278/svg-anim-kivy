@@ -7,6 +7,12 @@
 
 
 #
+### Features in progress:
+* SVG component-wise animation support
+
+<img src="demo/adv_svg_anim.gif" width=300>
+
+#
 
 ### No more dependency on png - works out of the box for svg
 Now you can take some of the advantages svg offers in your kivy apps. Those are:

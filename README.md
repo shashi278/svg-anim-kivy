@@ -1,7 +1,7 @@
 ## Kivg
 *SVG path drawing and animation support in kivy application*
 
-[![build](https://travis-ci.org/shashi278/svg-anim-kivy.svg?branch=main)](https://travis-ci.org/github/shashi278/svg-anim-kivy/) [![Python 3.6](https://img.shields.io/pypi/pyversions/kivymd)](https://www.python.org/downloads/release/python-360/) [![pypi](https://img.shields.io/pypi/v/kivg)](https://pypi.org/project/Kivg/) [![license](https://img.shields.io/pypi/l/kivg)](https://github.com/shashi278/svg-anim-kivy/blob/main/LICENSE) [![downloads](https://img.shields.io/pypi/dm/kivg)](https://pypi.org/project/Kivg/) [![code size](https://img.shields.io/github/languages/code-size/shashi278/svg-anim-kivy)]()
+[![build](https://travis-ci.com/shashi278/svg-anim-kivy.svg?branch=main)](https://travis-ci.org/github/shashi278/svg-anim-kivy/) [![Python 3.6](https://img.shields.io/pypi/pyversions/kivymd)](https://www.python.org/downloads/release/python-360/) [![pypi](https://img.shields.io/pypi/v/kivg)](https://pypi.org/project/Kivg/) [![license](https://img.shields.io/github/license/shashi278/svg-anim-kivy)](https://github.com/shashi278/svg-anim-kivy/blob/main/LICENSE) [![downloads](https://img.shields.io/pypi/dm/kivg)](https://pypi.org/project/Kivg/) [![code size](https://img.shields.io/github/languages/code-size/shashi278/svg-anim-kivy)]()
 
 #
 

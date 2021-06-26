@@ -6,7 +6,7 @@
 #
 
 ## Features
-| **SVG component-wise Animation** | **Path Drawing & filling** |
+| **Path Drawing & filling** | **Shape Animation** |
 | :-------------: |:-------------:|
 | <img src="https://raw.githubusercontent.com/shashi278/svg-anim-kivy/main/demo/svg_demo.gif" width=300> | <img src="https://raw.githubusercontent.com/shashi278/svg-anim-kivy/main/demo/adv_svg_anim.gif" width=300> |
 
@@ -23,7 +23,7 @@ pip install kivg
 ```
 
 ## How to use?
-- Path drawing and filling
+- ### Path drawing and filling
 
     ```python
     s = Kivg(my_widget)
@@ -32,20 +32,19 @@ pip install kivg
     s.draw("github.svg", fill=False, animate=True, anim_type="seq")
 
     ```
-    ### Info:
+    #### Info:
     - **fill** : *Whether to fill the shape after drawing*. Defaults to `True`
 
     - **animate** : *Whether to animate drawing*. Defaults to `False`
 
     - **anim_type** : *Whether to draw in sequence or parallel. Available `"seq"` and `"par"`*. Defaults to `"seq"`
 
-    ##
-    ### Important:
+    #### Important:
     - Fill color would only work if it's in hex and inside `<path>` tag. You must modify svg if it's not this way already.
 
     - Gradient is not yet supported - default to `#ffffff` if can't parse color
     #
-- Shape Animation
+- ### Shape Animation
     ```python
     s = Kivg(my_widget)
 
@@ -59,7 +58,7 @@ pip install kivg
     # call shape_animate method with `svg_file` and an animation config list and optional callback
     s.shape_animate("text.svg", anim_config_list=anim_config, on_complete=lambda *args: print("Completed!"))
     ```
-    ### Info:
+    #### Info:
     - **anim_config_list** : A list of dicts where each dict contain config for an `id`. Description of each key:
         - `"id_"` : `id` of svg `<path>` tag. It's required so each dict must contain `"id_"` key
 
@@ -71,7 +70,7 @@ pip install kivg
 
     - **on_complete**(optional) : Function to call after entire animation is finished. It can be used to create looping animation
 
-    ### Important:
+    #### Important:
     - You must add a unique `id` to each path element you want to animate
 
     - Dict order in the list is important

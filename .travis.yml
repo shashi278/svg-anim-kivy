@@ -1,0 +1,26 @@
+cache: pip
+matrix:
+  fast_finish: true
+  include:
+  - name: Black
+    env: RUN=black
+    language: python
+    python: 3.7
+    os: linux
+    dist: bionic
+install:
+- pip install pycodestyle
+script:
+- pycodestyle kivg/__init__.py
+after_failure:
+- sleep 10;
+- echo == End ==
+deploy:
+  skip_existing: true
+  provider: pypi
+  user: __token__
+  password:
+    secure: OYQaJvPlTfOgDMVXtSmrBd2wx03pg9cpBJnR3ke9my7/GfnoUszucFYFarJNPzb1ayn6ueNR4kBpN1KBQJo/crP9ef0z/d3o62RXQZligjYI/Xooi4v+tgry0Pm3Etpr9pcHq8yNTSIX7RhpqHxywVDAw7dgcT340ZiHwRti4dl8klSf31TFLPIGwjRmAcxEkPKM2ynOHDQXjG1U9gJt3NALiQikJmAv60ZdkFvDi4heqc9yn/AP5F66ISPN+cT2zw5TapFCfQGKPeF0u3NZmxcpIg+BAKY+vlZgm41qFl4Yl4Y2nAhcwO7+eRK/BIWSs9FZYP3tYOTYzRpdiQ6Y/tSEkXtu6JWLdPQ/VqzyGWUcC+2Ijxe5RCBlN4mnYy1Mn3jGy6qEkXBvS9Ig/TiXWz8kQ965g/iQxhr3CHWxIc3m1OMbfuRXInZqlCTJj3uQMl8cVrSw5+Io4dv5GmNuXvmISZBZCxkoHY3lripxck2HEDa+4IA+Cgh+6sqRLEF91SIp1ytIApDbJxtHzKJa1o7E2UUpEFlNSD2ZCI2mWf3EEomil1iYdVapazZCdeLsb4lslSS8e15m3rolrMhKZsxb5Vgo8sxiLk8x3DeAElJRH59cPuIMZYGOxWXCOBb+qChjlw6CrbgJ/VBtTmCIayGj5/j4OCsR+W/ZqQW9Vho=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true

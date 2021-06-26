@@ -1,1 +1,2 @@
-svg.path
+svg.path==4.1
+Kivy==2.0.0

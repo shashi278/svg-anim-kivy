@@ -75,8 +75,19 @@ pip install kivg
 
     - Dict order in the list is important
 
-* See [Demo code](https://raw.githubusercontent.com/shashi278/svg-anim-kivy/main/demo/main.py)
+* See [Demo code](https://github.com/shashi278/svg-anim-kivy/blob/main/demo/main.py)
 #
+
+### Useful Links:
+Few links that I found useful for modifying few svg files in order to work with this library are:
+
+* https://itchylabs.com/tools/path-to-bezier/ - Convert SVG Path to Cubic Curves
+
+    Use it to convert SVG Arcs to Cubic Bezier. Make sure you paste the entire `path` in the textfield rather than only the arc section. Also you should provide path dimensions(`W` & `H`) on the website as your svg width and height(found under `<svg>` tag)
+
+* https://codepen.io/thednp/pen/EgVqLw - Convert Relative SVG Path To Absolute Path
+    
+    Maybe useful when you want to split a single svg path into multiple paths for animation purpose. Paste the entire path. When splitting, make sure you close the previous path by adding a `Z` at the end in the path string.
 
 ### Changelog
 

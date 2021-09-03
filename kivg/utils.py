@@ -74,7 +74,7 @@ def parse_svg(svg_file):
     viewbox_string = doc.getElementsByTagName("svg")[0].getAttribute("viewBox")
     sw_size = list(
         map(
-            int,
+            float,
             viewbox_string.split(",")[2:]
             if "," in viewbox_string
             else viewbox_string.split(" ")[2:],

@@ -83,13 +83,16 @@ Few links that I found useful for modifying few svg files in order to work with 
 
 * https://itchylabs.com/tools/path-to-bezier/ - Convert SVG Path to Cubic Curves
 
-    Use it to convert SVG Arcs to Cubic Bezier. Make sure you paste the entire `path` in the textfield rather than only the arc section. Also you should provide path dimensions(`W` & `H`) on the website as your svg width and height(found under `<svg>` tag)
+    Use it to convert SVG Arcs to Cubic Bezier. Make sure you paste the entire `path` in the textfield rather than only the arc section. Also you should provide path dimensions(`W` & `H`) on the website as your svg width and height(found under `<svg>` tag). You may also need to close each path, i.e. add `Z` at the end of new converted path.
 
 * https://codepen.io/thednp/pen/EgVqLw - Convert Relative SVG Path To Absolute Path
     
     Maybe useful when you want to split a single svg path into multiple paths for animation purpose. Paste the entire path. When splitting, make sure you close the previous path by adding a `Z` at the end in the path string.
 
 ### Changelog
+
+**v1.1**
+* Fixed crashing when SVG size is not int
 
 **v1.0**
 * Shape animation feature added

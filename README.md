@@ -40,7 +40,7 @@ pip install kivg
     - **anim_type** : *Whether to draw in sequence or parallel. Available `"seq"` and `"par"`*. Defaults to `"seq"`
 
     #### Important:
-    - Fill color would only work if it's in hex and inside `<path>` tag. You must modify svg if it's not this way already.
+    - Fill color would only work if it's in hex and inside `<path>` tag. You must modify svg if it's not this way already. Like `<svg... > <path fill='#color'.. />`
 
     - Gradient is not yet supported - default to `#ffffff` if can't parse color
     #

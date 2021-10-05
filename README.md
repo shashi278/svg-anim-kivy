@@ -106,4 +106,4 @@ Few links that I found useful for modifying few svg files in order to work with 
 
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
-Whether you found a bug or have some idea to improve the project, PRs are always more than welcome
+Whether you found a bug or have some idea to improve the project, PRs are always more than welcome.

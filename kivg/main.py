@@ -9,6 +9,7 @@ from kivy.graphics import (
 )
 from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
 from .animation import Animation
+from kivy.clock import mainthread
 from kivy.utils import get_color_from_hex as gch
 from kivy.properties import NumericProperty
 
@@ -357,7 +358,7 @@ class Kivg:
         s = [*self.prev_shapes, self.curr_shape]
         self.fill_up_shapes_anim(s)
 
-
+    @mainthread
     def draw(self, svg_file, animate=False, anim_type="seq", *args, **kwargs):
         """
         Function to animate

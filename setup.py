@@ -6,8 +6,8 @@ with open("README.md", "r") as fh:
 
 
 def get_version() -> str:
-    """Get __version__ from __init__.py file."""
-    version_file = os.path.join(os.path.dirname(__file__), "kivg", "__init__.py")
+    """Get __version__ from version.py file."""
+    version_file = os.path.join(os.path.dirname(__file__), "kivg", "version.py")
     version_file_data = open(version_file, "rt", encoding="utf-8").read()
     version_regex = r"(?<=^__version__ = ['\"])[^'\"]+(?=['\"]$)"
     try:

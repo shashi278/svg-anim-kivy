@@ -18,7 +18,8 @@ from xml.dom import minidom
 
 from collections import OrderedDict
 
-from .utils import x, y, point, line_points, bezier_points, get_all_points, parse_svg, find_center
+from .path_utils import get_all_points, bezier_points, find_center, line_points
+from .svg_parser import parse_svg
 
 class Kivg:
     def __init__(self, widget, *args):
@@ -128,7 +129,7 @@ class Kivg:
                 for e in s:
                     if isinstance(e, Line):
                         lp = line_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         tmp2.append([
                             (lp[0], lp[1]),
@@ -137,7 +138,7 @@ class Kivg:
 
                     if isinstance(e, CubicBezier):
                         bp = bezier_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         tmp2.append([
                             (bp[0], bp[1]),
@@ -469,7 +470,7 @@ class Kivg:
 
                     if isinstance(e, Line):
                         lp = line_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         setattr(self.b, "line{}_start_x".format(line_count), lp[0])
                         setattr(self.b, "line{}_start_y".format(line_count), lp[1])
@@ -510,7 +511,7 @@ class Kivg:
                         tmp.extend(lp)
                     if isinstance(e, CubicBezier):
                         bp = bezier_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         setattr(self.b, "bezier{}_start_x".format(bezier_count), bp[0])
                         setattr(self.b, "bezier{}_start_y".format(bezier_count), bp[1])

@@ -14,6 +14,7 @@ from kivy.graphics import (
 )
 
 from kivg.mesh import MeshHandler
+from kivg.renderer import SvgRenderer
 from .animation import Animation
 
 from .path_utils import get_all_points, bezier_points, find_center, line_points
@@ -307,44 +308,21 @@ class Kivg:
             return anim_list
     
     def track_progress(self, *args):
+        """
+        Track animation progress and update the canvas.
         
+        Called during animation progress. Updates the current shape.
+        
+        Args:
+            *args: Animation callback arguments
+            
+        Returns:
+            None
+        """
         id_ = getattr(self, "curr_id")
-        shape_list = []
-        line_count = 0
-        bezier_count = 0
-        for each in getattr(self, "{}_tmp".format(id_)):
-            for e in each:
-                x =  []
-                if len(e)==2: #Line
-                    shape_list.extend([
-                        getattr(self.b, "{}_mesh_line{}_start_x".format(id_, line_count)),
-                        getattr(self.b, "{}_mesh_line{}_start_y".format(id_, line_count)),
-                        getattr(self.b, "{}_mesh_line{}_end_x".format(id_, line_count)),
-                        getattr(self.b, "{}_mesh_line{}_end_y".format(id_, line_count))
-                    ])
-                
-                    line_count += 1
+        elements_list = getattr(self, "{}_tmp".format(id_))
 
-                if len(e)==4: #Bezier
-                    shape_list.extend(
-                        get_all_points(
-                            (   getattr(self.b, "{}_mesh_bezier{}_start_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_start_y".format(id_, bezier_count))),
-                            (
-                                getattr(self.b, "{}_mesh_bezier{}_control1_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_control1_y".format(id_, bezier_count))
-                            ),
-                            (
-                                getattr(self.b, "{}_mesh_bezier{}_control2_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_control2_y".format(id_, bezier_count))
-                            ),
-                            (
-                                getattr(self.b, "{}_mesh_bezier{}_end_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_end_y".format(id_, bezier_count))
-                            )
-                        )
-                    )
-                    bezier_count += 1
+        shape_list = SvgRenderer.collect_shape_points(elements_list, self.b, id_)
         
         # print(shape_list[:5])
         self.b.canvas.clear()
@@ -606,53 +584,5 @@ class Kivg:
         return anim_list
 
     def update_canvas(self, *args, **kwargs):
-        self.b.canvas.clear()
-
-        with self.b.canvas:
-            Color(*self.LINE_COLOR)
-
-            line_count = 0
-            bezier_count = 0
-
-            # Draw svg
-            for e in self.path:
-                # if isinstance(e, Move):
-                #     initial_point = line_points(e)
-                #     print("Got initial point: {}".format(initial_point))
-                if isinstance(e, Line):
-                    KivyLine(
-                        points=[
-                            getattr(self.b, "line{}_start_x".format(line_count)),
-                            getattr(self.b, "line{}_start_y".format(line_count)),
-                            getattr(self.b, "line{}_end_x".format(line_count)),
-                            getattr(self.b, "line{}_end_y".format(line_count)),
-                        ],
-                        width=getattr(self.b, "line{}_width".format(line_count)),
-                    )
-                    line_count += 1
-                if isinstance(e, CubicBezier):
-                    KivyLine(
-                        bezier=[
-                            getattr(self.b, "bezier{}_start_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_start_y".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control1_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control1_y".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control2_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control2_y".format(bezier_count)),
-                            getattr(self.b, "bezier{}_end_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_end_y".format(bezier_count)),
-                        ],
-                        width=getattr(self.b, "bezier{}_width".format(bezier_count)),
-                    )
-                    bezier_count += 1
-                # if isinstance(e, Close):
-                #     KivyLine(points=[*line_points(e),*initial_point], )
-                #     print("Closing subpath from {} to {}".format(line_points(e), initial_point))
-
-            # if self.fill:
-            #     try:
-            #         s = self.sf.split(".")[0] + ".png"
-            #         Color(1, 1, 1, getattr(self.b, "image_opacity"))
-            #         Rectangle(pos=self.b.pos, size=self.b.size, source=s)
-            #     except:
-            #         pass
+        """Update the canvas with the current drawing state."""
+        SvgRenderer.update_canvas(self.b, self.path, self.LINE_COLOR)

@@ -1,56 +1,50 @@
-from kivy.graphics import (
-    Line as KivyLine,
-    Bezier as KivyBezier,
-    Color,
-    Rectangle,
-    Ellipse,
-    Triangle,
-    Mesh,
-)
-from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
-from .animation import Animation
-from kivy.utils import get_color_from_hex as gch
-from kivy.properties import NumericProperty
+"""
+Kivg - SVG drawing and animation for Kivy
+Main implementation module
+"""
+
+from collections import OrderedDict
 
 from svg.path import parse_path
 from svg.path.path import Line, CubicBezier, Close, Move
-from xml.dom import minidom
 
-from collections import OrderedDict
+from kivy.graphics import (
+    Line as KivyLine,
+    Color,
+)
+
+from kivg.mesh import MeshHandler
+from .animation import Animation
 
 from .path_utils import get_all_points, bezier_points, find_center, line_points
 from .svg_parser import parse_svg
 
 class Kivg:
+    """
+    Main class for rendering and animating SVG files in Kivy applications.
+    
+    This class provides methods to draw SVG files onto Kivy widgets and
+    animate them using various techniques.
+    """
+
     def __init__(self, widget, *args):
         """
-        widget: widget to draw svg upon
+        Initialize the Kivg renderer.
+        
+        Args:
+            widget: Kivy widget to draw SVG upon
+            *args: Additional arguments (not currently used)
         """
-        self.b = widget
+        self.b = widget  # Target widget for rendering
         self._fill = True  # Fill path with color after drawing
         self._LINE_WIDTH = 2
         self._LINE_COLOR = [0, 0, 0, 1]
         self._DUR = 0.02
         self.psf = ""  # Previous svg file - Don't re-find path for same file in a row
 
-    def get_tess(self, shapes):
-        tess = Tesselator()
-        for shape in shapes:
-            if len(shape) >= 3:
-                tess.add_contour(shape)
-        return tess
-
-    def get_mesh(self, shapes):
-        tess = self.get_tess(shapes)
-        ret = tess.tesselate(WINDING_ODD, TYPE_POLYGONS)
-        return tess.meshes
-
     def fill_up(self, shapes, color):
-        meshes = self.get_mesh(shapes)
-        with self.b.canvas:
-            Color(*color[:3], getattr(self.b, "mesh_opacity"))
-            for vertices, indices in meshes:
-                Mesh(vertices=vertices, indices=indices, mode="triangle_fan")
+        """Fill shapes with specified color using mesh rendering."""
+        MeshHandler.render_mesh(self.b, shapes, color, "mesh_opacity")
 
     def fill_up_shapes(self, *args):
         for id_, closed_paths in self.closed_shapes.items():

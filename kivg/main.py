@@ -1,55 +1,51 @@
-from kivy.graphics import (
-    Line as KivyLine,
-    Bezier as KivyBezier,
-    Color,
-    Rectangle,
-    Ellipse,
-    Triangle,
-    Mesh,
-)
-from kivy.graphics.tesselator import Tesselator, WINDING_ODD, TYPE_POLYGONS
-from .animation import Animation
-from kivy.utils import get_color_from_hex as gch
-from kivy.properties import NumericProperty
-
-from svg.path import parse_path
-from svg.path.path import Line, CubicBezier, Close, Move
-from xml.dom import minidom
+"""
+Kivg - SVG drawing and animation for Kivy
+Main implementation module
+"""
 
 from collections import OrderedDict
 
-from .utils import x, y, point, line_points, bezier_points, get_all_points, parse_svg, find_center
+from svg.path import parse_path
+from svg.path.path import Line, CubicBezier, Close, Move
+
+from kivy.graphics import (
+    Line as KivyLine,
+    Color,
+)
+
+from kivg.mesh import MeshHandler
+from kivg.renderer import SvgRenderer
+from .animation import Animation
+
+from .path_utils import get_all_points, bezier_points, find_center, line_points
+from .svg_parser import parse_svg
 
 class Kivg:
+    """
+    Main class for rendering and animating SVG files in Kivy applications.
+    
+    This class provides methods to draw SVG files onto Kivy widgets and
+    animate them using various techniques.
+    """
+
     def __init__(self, widget, *args):
         """
-        widget: widget to draw svg upon
+        Initialize the Kivg renderer.
+        
+        Args:
+            widget: Kivy widget to draw SVG upon
+            *args: Additional arguments (not currently used)
         """
-        self.b = widget
+        self.b = widget  # Target widget for rendering
         self._fill = True  # Fill path with color after drawing
         self._LINE_WIDTH = 2
         self._LINE_COLOR = [0, 0, 0, 1]
         self._DUR = 0.02
         self.psf = ""  # Previous svg file - Don't re-find path for same file in a row
 
-    def get_tess(self, shapes):
-        tess = Tesselator()
-        for shape in shapes:
-            if len(shape) >= 3:
-                tess.add_contour(shape)
-        return tess
-
-    def get_mesh(self, shapes):
-        tess = self.get_tess(shapes)
-        ret = tess.tesselate(WINDING_ODD, TYPE_POLYGONS)
-        return tess.meshes
-
     def fill_up(self, shapes, color):
-        meshes = self.get_mesh(shapes)
-        with self.b.canvas:
-            Color(*color[:3], getattr(self.b, "mesh_opacity"))
-            for vertices, indices in meshes:
-                Mesh(vertices=vertices, indices=indices, mode="triangle_fan")
+        """Fill shapes with specified color using mesh rendering."""
+        MeshHandler.render_mesh(self.b, shapes, color, "mesh_opacity")
 
     def fill_up_shapes(self, *args):
         for id_, closed_paths in self.closed_shapes.items():
@@ -128,7 +124,7 @@ class Kivg:
                 for e in s:
                     if isinstance(e, Line):
                         lp = line_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         tmp2.append([
                             (lp[0], lp[1]),
@@ -137,7 +133,7 @@ class Kivg:
 
                     if isinstance(e, CubicBezier):
                         bp = bezier_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         tmp2.append([
                             (bp[0], bp[1]),
@@ -312,44 +308,21 @@ class Kivg:
             return anim_list
     
     def track_progress(self, *args):
+        """
+        Track animation progress and update the canvas.
         
+        Called during animation progress. Updates the current shape.
+        
+        Args:
+            *args: Animation callback arguments
+            
+        Returns:
+            None
+        """
         id_ = getattr(self, "curr_id")
-        shape_list = []
-        line_count = 0
-        bezier_count = 0
-        for each in getattr(self, "{}_tmp".format(id_)):
-            for e in each:
-                x =  []
-                if len(e)==2: #Line
-                    shape_list.extend([
-                        getattr(self.b, "{}_mesh_line{}_start_x".format(id_, line_count)),
-                        getattr(self.b, "{}_mesh_line{}_start_y".format(id_, line_count)),
-                        getattr(self.b, "{}_mesh_line{}_end_x".format(id_, line_count)),
-                        getattr(self.b, "{}_mesh_line{}_end_y".format(id_, line_count))
-                    ])
-                
-                    line_count += 1
+        elements_list = getattr(self, "{}_tmp".format(id_))
 
-                if len(e)==4: #Bezier
-                    shape_list.extend(
-                        get_all_points(
-                            (   getattr(self.b, "{}_mesh_bezier{}_start_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_start_y".format(id_, bezier_count))),
-                            (
-                                getattr(self.b, "{}_mesh_bezier{}_control1_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_control1_y".format(id_, bezier_count))
-                            ),
-                            (
-                                getattr(self.b, "{}_mesh_bezier{}_control2_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_control2_y".format(id_, bezier_count))
-                            ),
-                            (
-                                getattr(self.b, "{}_mesh_bezier{}_end_x".format(id_, bezier_count)),
-                                getattr(self.b, "{}_mesh_bezier{}_end_y".format(id_, bezier_count))
-                            )
-                        )
-                    )
-                    bezier_count += 1
+        shape_list = SvgRenderer.collect_shape_points(elements_list, self.b, id_)
         
         # print(shape_list[:5])
         self.b.canvas.clear()
@@ -469,7 +442,7 @@ class Kivg:
 
                     if isinstance(e, Line):
                         lp = line_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         setattr(self.b, "line{}_start_x".format(line_count), lp[0])
                         setattr(self.b, "line{}_start_y".format(line_count), lp[1])
@@ -510,7 +483,7 @@ class Kivg:
                         tmp.extend(lp)
                     if isinstance(e, CubicBezier):
                         bp = bezier_points(
-                            e, *self.b.size, *self.b.pos, *self.sw_size, self.sf
+                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
                         )
                         setattr(self.b, "bezier{}_start_x".format(bezier_count), bp[0])
                         setattr(self.b, "bezier{}_start_y".format(bezier_count), bp[1])
@@ -611,53 +584,5 @@ class Kivg:
         return anim_list
 
     def update_canvas(self, *args, **kwargs):
-        self.b.canvas.clear()
-
-        with self.b.canvas:
-            Color(*self.LINE_COLOR)
-
-            line_count = 0
-            bezier_count = 0
-
-            # Draw svg
-            for e in self.path:
-                # if isinstance(e, Move):
-                #     initial_point = line_points(e)
-                #     print("Got initial point: {}".format(initial_point))
-                if isinstance(e, Line):
-                    KivyLine(
-                        points=[
-                            getattr(self.b, "line{}_start_x".format(line_count)),
-                            getattr(self.b, "line{}_start_y".format(line_count)),
-                            getattr(self.b, "line{}_end_x".format(line_count)),
-                            getattr(self.b, "line{}_end_y".format(line_count)),
-                        ],
-                        width=getattr(self.b, "line{}_width".format(line_count)),
-                    )
-                    line_count += 1
-                if isinstance(e, CubicBezier):
-                    KivyLine(
-                        bezier=[
-                            getattr(self.b, "bezier{}_start_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_start_y".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control1_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control1_y".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control2_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_control2_y".format(bezier_count)),
-                            getattr(self.b, "bezier{}_end_x".format(bezier_count)),
-                            getattr(self.b, "bezier{}_end_y".format(bezier_count)),
-                        ],
-                        width=getattr(self.b, "bezier{}_width".format(bezier_count)),
-                    )
-                    bezier_count += 1
-                # if isinstance(e, Close):
-                #     KivyLine(points=[*line_points(e),*initial_point], )
-                #     print("Closing subpath from {} to {}".format(line_points(e), initial_point))
-
-            # if self.fill:
-            #     try:
-            #         s = self.sf.split(".")[0] + ".png"
-            #         Color(1, 1, 1, getattr(self.b, "image_opacity"))
-            #         Rectangle(pos=self.b.pos, size=self.b.size, source=s)
-            #     except:
-            #         pass
+        """Update the canvas with the current drawing state."""
+        SvgRenderer.update_canvas(self.b, self.path, self.LINE_COLOR)

@@ -22,63 +22,131 @@ Now you can take some of the advantages svg offers, in your kivy apps. Those are
 pip install kivg
 ```
 
-## How to use?
-- ### Path drawing and filling
+## Usage Guide
 
-    ```python
-    s = Kivg(my_widget)
+Kivg helps you easily draw and animate SVG files in your Kivy applications.
 
-    # call draw method with a `svg_file` name
-    s.draw("github.svg", fill=False, animate=True, anim_type="seq")
+### Path Drawing and Filling
 
-    ```
-    #### Info:
-    - **fill** : *Whether to fill the shape after drawing*. Defaults to `True`
+```python
+from kivg import Kivg
 
-    - **animate** : *Whether to animate drawing*. Defaults to `False`
+s = Kivg(my_widget)
 
-    - **anim_type** : *Whether to draw in sequence or parallel. Available `"seq"` and `"par"`*. Defaults to `"seq"`
+# call draw method with a `svg_file` name
+s.draw("github.svg", fill=False, animate=True, anim_type="seq")
+```
 
-    #### Important:
-    - Fill color would only work if it's in hex and inside `<path>` tag. You must modify svg if it's not this way already.
+#### Parameters:
+- **fill** : *Whether to fill the shape after drawing*. Defaults to `True`
+- **animate** : *Whether to animate drawing*. Defaults to `False`
+- **anim_type** : *Whether to draw in sequence or parallel. Available `"seq"` and `"par"`*. Defaults to `"seq"`
+- **line_width** : *Width of the path stroke*. Defaults to `2`
+- **line_color** : *Color of the path stroke in RGBA format*. Defaults to `[0, 0, 0, 1]`
+- **dur** : *Duration of each animation step in seconds*. Defaults to `0.02`
 
-    - Gradient is not yet supported - default to `#ffffff` if can't parse color
-    #
-- ### Shape Animation
-    ```python
-    s = Kivg(my_widget)
+#### Important:
+- Fill color would only work if it's in hex and inside `<path>` tag. You must modify svg if it's not this way already.
+- Gradient is not yet supported - default to `#ffffff` if can't parse color
 
-    anim_config = [
-        { "id_":"k", "from_":"center_x", "t":"out_back",   "d":.4 },
-        { "id_":"i", "from_":"center_y", "t":"out_bounce", "d":.4 },
-        { "id_":"v", "from_":"top",      "t":"out_quint",  "d":.4 },
-        { "id_":"y", "from_":"bottom",   "t":"out_back",   "d":.4 }
-    ]
-
-    # call shape_animate method with `svg_file` and an animation config list and optional callback
-    s.shape_animate("text.svg", anim_config_list=anim_config, on_complete=lambda *args: print("Completed!"))
-    ```
-    #### Info:
-    - **anim_config_list** : A list of dicts where each dict contain config for an `id`. Description of each key:
-        - `"id_"` : `id` of svg `<path>` tag. It's required so each dict must contain `"id_"` key
-
-        - `"from_"` : Direction from which a path should grow. Accepted values `"left"`, `"right"`, `"top"`, `"bottom"`, `"center_x"`(grow from center along horizontal axis), `"center_y"`, and `None`(Draw without animation). Defaults to `None`.
-
-        - `"t"` : [Animation transition](https://kivy.org/doc/stable/api-kivy.animation.html?highlight=animation#kivy.animation.AnimationTransition). Defaults to `"out_sine"`.
-
-        - `"d"` : Duration of animation. It'll still in-effect if `"from_"` is set to `None`. Defaults to .3
-
-    - **on_complete**(optional) : Function to call after entire animation is finished. It can be used to create looping animation
-
-    #### Important:
-    - You must add a unique `id` to each path element you want to animate
-
-    - Dict order in the list is important
-
-* See [Demo code](https://github.com/shashi278/svg-anim-kivy/blob/main/demo/main.py)
 #
 
-### Useful Links:
+### Shape Animation
+
+```python
+from kivg import Kivg
+
+s = Kivg(my_widget)
+
+anim_config = [
+    { "id_":"k", "from_":"center_x", "t":"out_back",   "d":.4 },
+    { "id_":"i", "from_":"center_y", "t":"out_bounce", "d":.4 },
+    { "id_":"v", "from_":"top",      "t":"out_quint",  "d":.4 },
+    { "id_":"y", "from_":"bottom",   "t":"out_back",   "d":.4 }
+]
+
+# call shape_animate method with `svg_file` and an animation config list and optional callback
+s.shape_animate("text.svg", anim_config_list=anim_config, on_complete=lambda *args: print("Completed!"))
+```
+
+#### Animation Configuration:
+- **anim_config_list** : A list of dicts where each dict contain config for an `id`. Description of each key:
+    - `"id_"` : `id` of svg `<path>` tag. It's required so each dict must contain `"id_"` key
+    - `"from_"` : Direction from which a path should grow. Accepted values `"left"`, `"right"`, `"top"`, `"bottom"`, `"center_x"`(grow from center along horizontal axis), `"center_y"`, and `None`(Draw without animation). Defaults to `None`.
+    - `"t"` : [Animation transition](https://kivy.org/doc/stable/api-kivy.animation.html?highlight=animation#kivy.animation.AnimationTransition). Defaults to `"out_sine"`.
+    - `"d"` : Duration of animation. It'll still in-effect if `"from_"` is set to `None`. Defaults to .3
+
+- **on_complete** (optional) : Function to call after entire animation is finished. It can be used to create looping animation
+
+#### Important:
+- You must add a unique `id` to each path element you want to animate
+- Dictionary order in the list is important - animations run in the sequence provided
+- Animations can be chained by using the on_complete callback for continuous effects
+
+## Project Structure
+
+The project is organized into the following main components:
+
+```
+kivg/
+├── __init__.py         # Package entry point
+├── data_classes.py     # Data structures for animation contexts
+├── main.py             # Core Kivg class implementation
+├── mesh_handler.py     # Handles mesh rendering 
+├── path_utils.py       # SVG path utilities
+├── svg_parser.py       # SVG parsing functionality
+├── svg_renderer.py     # SVG rendering engine
+├── version.py          # Version information
+├── animation/          # Animation subsystem
+│   ├── animation_shapes.py  # Shape-specific animations
+│   ├── handler.py           # Animation coordination
+│   └── kivy_animation.py    # Kivy animation file with some modifications
+└── drawing/            # Drawing subsystem
+    └── manager.py      # Drawing management
+```
+
+## Quick Start
+
+1. **Install the package**:
+   ```bash
+   pip install kivg
+   ```
+
+2. **Set up your Kivy widget**:
+   ```python
+    from kivy.app import App
+    from kivy.uix.widget import Widget
+    from kivg import Kivg
+
+    class MyWidget(Widget):
+        def __init__(self, **kwargs):
+            super(MyWidget, self).__init__(**kwargs)
+            self.size = (1024, 1024)
+            self.pos = (0, 0)
+
+    class KivgDemoApp(App):
+        def build(self):
+            widget = MyWidget()
+            self.kivg = Kivg(widget)
+            self.kivg.draw("icons/so.svg", animate=True, line_color=[1,1,1,1], line_width=2)
+            return widget
+
+    if __name__ == "__main__":
+        KivgDemoApp().run()
+   ```
+
+3. **Try shape animations**:
+   ```python
+   # Configure animations for different shapes
+   animations = [
+       {"id_": "shape1", "from_": "left", "t": "out_bounce", "d": 0.5},
+       {"id_": "shape2", "from_": "top", "t": "out_elastic", "d": 0.3}
+   ]
+   self.kivg.shape_animate("path/to/your.svg", anim_config_list=animations)
+   ```
+
+## Useful Tools
+
 Few links that I found useful for modifying few svg files in order to work with this library are:
 
 * https://itchylabs.com/tools/path-to-bezier/ - Convert SVG Path to Cubic Curves
@@ -89,7 +157,11 @@ Few links that I found useful for modifying few svg files in order to work with 
     
     Maybe useful when you want to split a single svg path into multiple paths for animation purpose. Paste the entire path. When splitting, make sure you close the previous path by adding a `Z` at the end in the path string.
 
-### Changelog
+* https://jakearchibald.github.io/svgomg/ - SVG Optimizer
+    
+    Useful for cleaning up and optimizing SVG files to ensure compatibility.
+
+## Changelog
 
 **v1.1**
 * Fixed crashing when SVG size is not int
@@ -102,8 +174,19 @@ Few links that I found useful for modifying few svg files in order to work with 
 * Added option to draw image without animation, `animate=False`
 * Added option to draw empty or filled path, `fill=True` or `fill=False`
 
-### Contribution
+## Contributing
 
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
-Whether you found a bug or have some idea to improve the project, PRs are always more than welcome
+We welcome contributions! Here's how you can help:
+
+1. **Bug fixes**: If you find a bug, please open an issue or submit a pull request with a fix
+2. **Feature additions**: Have an idea for a new feature? Open an issue to discuss it
+3. **Documentation**: Improvements to documentation are always appreciated
+4. **Examples**: Add more example use cases to help others learn
+
+Please make sure to test your changes before submitting a pull request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/shashi278/svg-anim-kivy/blob/main/LICENSE) file for details.

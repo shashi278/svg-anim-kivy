@@ -8,9 +8,9 @@ from typing import List, Tuple, Dict, Any, Optional
 from svg.path import parse_path
 from svg.path.path import Line, CubicBezier, Close, Move
 
-from .animation import Animation
-from .path_utils import get_all_points, bezier_points, line_points
-from .svg_parser import parse_svg
+from ..animation.kivy_animation import Animation
+from ..path_utils import get_all_points, bezier_points, line_points
+from ..svg_parser import parse_svg
 
 
 class DrawingManager:

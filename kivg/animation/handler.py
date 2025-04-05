@@ -4,9 +4,9 @@ AnimationHandler manages animation creation and sequencing.
 
 from typing import List, Any, Optional, Callable
 
-from .animation import Animation
-from .data_classes import AnimationContext
-from .shape_animation import ShapeAnimator
+from .kivy_animation import Animation
+from ..data_classes import AnimationContext
+from .animation_shapes import ShapeAnimator
 
 
 class AnimationHandler:

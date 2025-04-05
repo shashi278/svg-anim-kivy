@@ -1,11 +1,11 @@
 """
 Shape-specific animation functionality for Kivg.
 """
-from kivg.animation import Animation
+from kivg.animation.kivy_animation import Animation
 from typing import Dict, List, Tuple
 
 from kivg.data_classes import AnimationContext
-from .path_utils import find_center, line_points, bezier_points
+from ..path_utils import find_center, line_points, bezier_points
 from svg.path.path import Line, CubicBezier
 
 class ShapeAnimator:

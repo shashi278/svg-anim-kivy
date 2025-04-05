@@ -6,11 +6,11 @@ Core class and main API
 from collections import OrderedDict
 from typing import List, Tuple, Dict, Any, Callable
 
-from kivg.animation import Animation
-from kivg.drawing_manager import DrawingManager
-from kivg.animation_handler import AnimationHandler
-from kivg.mesh import MeshHandler
-from kivg.renderer import SvgRenderer
+from kivg.animation.kivy_animation import Animation
+from kivg.drawing.manager import DrawingManager
+from kivg.animation.handler import AnimationHandler
+from kivg.mesh_handler import MeshHandler
+from kivg.svg_renderer import SvgRenderer
 
 
 class Kivg:

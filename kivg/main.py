@@ -4,17 +4,15 @@ Main implementation module
 """
 
 from collections import OrderedDict
+from typing import List, Tuple
 
 from svg.path import parse_path
 from svg.path.path import Line, CubicBezier, Close, Move
 
-from kivy.graphics import (
-    Line as KivyLine,
-    Color,
-)
-
+from kivg.data_classes import AnimationContext
 from kivg.mesh import MeshHandler
 from kivg.renderer import SvgRenderer
+from kivg.shape_animation import ShapeAnimator
 from .animation import Animation
 
 from .path_utils import get_all_points, bezier_points, find_center, line_points
@@ -82,13 +80,18 @@ class Kivg:
         self.curr_count= 0
         for i, config in enumerate(anim_config_list):
             # setattr(self, "{}_".format(config["id_"]), config["id_"])
-            anim_list = self._shape_animate(
-                config["id_"],
-                config.get("from_", None),
-                config.get("t", "out_sine"),
-                config.get("d", .3),
-                )
-            
+            context = AnimationContext(
+                widget=self.b,
+                shape_id=config["id_"],
+                direction=config.get("from_", None),
+                transition=config.get("t", "out_sine"),
+                duration=config.get("d", .3),
+                closed_shapes=self.closed_shapes,
+                sw_size=self.sw_size,
+                svg_file=self.sf
+            )
+            anim_list = ShapeAnimator.setup_animation(self, context)
+
             if anim_list:
                 anim = anim_list[0]
                 for a in anim_list[1:]:
@@ -110,202 +113,6 @@ class Kivg:
             self.all_anim[-1][1].bind(on_complete=on_complete)
         
         a.start(self.b)
-    
-    def _shape_animate(self, id_, from_, t, d):
-        line_count = 0
-        bezier_count = 0
-        anim_list = []
-        self.prev_shapes = []
-        self.curr_shape = []
-        if self.closed_shapes.get(id_, None):
-            tmp = []
-            for s in self.closed_shapes[id_][id_ + "paths"]:
-                tmp2 = []
-                for e in s:
-                    if isinstance(e, Line):
-                        lp = line_points(
-                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
-                        )
-                        tmp2.append([
-                            (lp[0], lp[1]),
-                            (lp[2], lp[3])
-                        ])
-
-                    if isinstance(e, CubicBezier):
-                        bp = bezier_points(
-                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
-                        )
-                        tmp2.append([
-                            (bp[0], bp[1]),
-                            (bp[2], bp[3]),
-                            (bp[4], bp[5]),
-                            (bp[6], bp[7])
-                        ])
-                        
-                # print(tmp2)
-                tmp.append(tmp2)
-            # s = self.closed_shapes[id_][id_ + "shapes"]
-            # print(c)
-            # print(len(s[0]))
-            l = []
-            for each in tmp:
-                for e in each:
-                    for i in e: l.append(i[0]) if from_ in ("left", "right", "center_x") else l.append(i[1])
-            
-
-            if from_ in ("top", "right"):
-                base_point = max(l) # rightmost/topmost point to start animation from
-            elif from_ in ("left", "bottom"):
-                base_point = min(l) # leftmost/bottommost point to start animation from
-            elif from_ in ("center_x", "center_y"):
-                base_point = find_center(sorted(l))
-
-            for each in tmp:
-                for e in each:
-                    if len(e)==2: #Line
-                        setattr(self.b, "{}_mesh_line{}_start_x".format(id_, line_count), base_point if from_ in ("left", "right", "center_x") else e[0][0])
-                        setattr(self.b, "{}_mesh_line{}_start_y".format(id_, line_count), base_point if from_ in ("top", "bottom", "center_y") else e[0][1])
-                        setattr(
-                            self.b,
-                            "{}_mesh_line{}_end_x".format(id_, line_count), base_point if from_ in ("left", "right", "center_x") else e[1][0]
-                        )
-                        setattr(
-                            self.b,
-                            "{}_mesh_line{}_end_y".format(id_, line_count),
-                            base_point if from_ in ("top", "bottom", "center_y") else e[1][1],
-                        )
-
-                        if from_ in ("left", "right", "center_x"):
-                            anim_list.append(
-                                Animation(
-                                    d=d,
-                                    t=t,
-                                    **dict(
-                                        zip(
-                                            [
-                                                "{}_mesh_line{}_start_x".format(id_, line_count),
-                                                "{}_mesh_line{}_end_x".format(id_, line_count),
-                                            ],
-                                            [e[0][0], e[1][0]],
-                                        )
-                                    ),
-                                )
-                            )
-                        else:
-                            anim_list.append(
-                                Animation(
-                                    d=d, #if from_ else 0
-                                    t=t,
-                                    **dict(
-                                        zip(
-                                            [
-                                                "{}_mesh_line{}_start_y".format(id_, line_count),
-                                                "{}_mesh_line{}_end_y".format(id_, line_count),
-                                            ],
-                                            [e[0][1], e[1][1]],
-                                        )
-                                    ),
-                                )
-                            )
-
-                        line_count += 1
-
-                    if len(e)==4: #Bezier
-                        setattr(self.b, "{}_mesh_bezier{}_start_x".format(id_, bezier_count), base_point if from_ in ("left", "right", "center_x") else e[0][0])
-                        setattr(self.b, "{}_mesh_bezier{}_start_y".format(id_, bezier_count), base_point if from_ in ("top", "bottom", "center_y") else e[0][1])
-                        setattr(
-                            self.b,
-                            "{}_mesh_bezier{}_control1_x".format(id_, bezier_count),
-                            base_point if from_ in ("left", "right", "center_x") else e[1][0],
-                        )
-                        setattr(
-                            self.b,
-                            "{}_mesh_bezier{}_control1_y".format(id_, bezier_count),
-                            base_point if from_ in ("top", "bottom", "center_y") else e[1][1],
-                        )
-                        setattr(
-                            self.b,
-                            "{}_mesh_bezier{}_control2_x".format(id_, bezier_count),
-                            base_point if from_ in ("left", "right", "center_x") else e[2][0],
-                        )
-                        setattr(
-                            self.b,
-                            "{}_mesh_bezier{}_control2_y".format(id_, bezier_count),
-                            base_point if from_ in ("top", "bottom", "center_y") else e[2][1],
-                        )
-                        setattr(
-                            self.b,
-                            "{}_mesh_bezier{}_end_x".format(id_, bezier_count),
-                            base_point if from_ in ("left", "right", "center_x") else e[3][0],
-                        )
-                        setattr(
-                            self.b,
-                            "{}_mesh_bezier{}_end_y".format(id_, bezier_count),
-                            base_point if from_ in ("top", "bottom", "center_y") else e[3][1],
-                        )
-
-                        if from_ in ("left", "right", "center_x"):
-                            anim_list.append(
-                                Animation(
-                                    d=d,
-                                    t=t,
-                                    **dict(
-                                        zip(
-                                            [
-                                                "{}_mesh_bezier{}_start_x".format(
-                                                    id_, bezier_count
-                                                ),
-                                                "{}_mesh_bezier{}_control1_x".format(
-                                                    id_, bezier_count
-                                                ),
-                                                "{}_mesh_bezier{}_control2_x".format(
-                                                    id_, bezier_count
-                                                ),
-                                                "{}_mesh_bezier{}_end_x".format(id_, bezier_count),
-                                            ],
-                                            [
-                                                e[0][0],
-                                                e[1][0],
-                                                e[2][0],
-                                                e[3][0],
-                                            ],
-                                        )
-                                    ),
-                                )
-                            )
-                        else:
-                            anim_list.append(
-                                Animation(
-                                    d=d, #if from_ else 0
-                                    t=t,
-                                    **dict(
-                                        zip(
-                                            [
-                                                "{}_mesh_bezier{}_start_y".format(
-                                                    id_, bezier_count
-                                                ),
-                                                "{}_mesh_bezier{}_control1_y".format(
-                                                    id_, bezier_count
-                                                ),
-                                                "{}_mesh_bezier{}_control2_y".format(
-                                                    id_, bezier_count
-                                                ),
-                                                "{}_mesh_bezier{}_end_y".format(id_, bezier_count),
-                                            ],
-                                            [
-                                                e[0][1],
-                                                e[1][1],
-                                                e[2][1],
-                                                e[3][1],
-                                            ],
-                                        )
-                                    ),
-                                )
-                            )
-                        bezier_count += 1
-
-            setattr(self, "{}_tmp".format(id_), tmp)
-            return anim_list
     
     def track_progress(self, *args):
         """

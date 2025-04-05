@@ -1,22 +1,16 @@
 """
 Kivg - SVG drawing and animation for Kivy
-Main implementation module
+Core class and main API
 """
 
 from collections import OrderedDict
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any, Callable
 
-from svg.path import parse_path
-from svg.path.path import Line, CubicBezier, Close, Move
-
-from kivg.data_classes import AnimationContext
+from kivg.drawing_manager import DrawingManager
+from kivg.animation_handler import AnimationHandler
 from kivg.mesh import MeshHandler
 from kivg.renderer import SvgRenderer
-from kivg.shape_animation import ShapeAnimator
-from .animation import Animation
 
-from .path_utils import get_all_points, bezier_points, find_center, line_points
-from .svg_parser import parse_svg
 
 class Kivg:
     """
@@ -26,7 +20,7 @@ class Kivg:
     animate them using various techniques.
     """
 
-    def __init__(self, widget, *args):
+    def __init__(self, widget: Any, *args):
         """
         Initialize the Kivg renderer.
         
@@ -34,362 +28,211 @@ class Kivg:
             widget: Kivy widget to draw SVG upon
             *args: Additional arguments (not currently used)
         """
-        self.b = widget  # Target widget for rendering
+        self.widget = widget  # Target widget for rendering
         self._fill = True  # Fill path with color after drawing
-        self._LINE_WIDTH = 2
-        self._LINE_COLOR = [0, 0, 0, 1]
-        self._DUR = 0.02
-        self.psf = ""  # Previous svg file - Don't re-find path for same file in a row
+        self._line_width = 2
+        self._line_color = [0, 0, 0, 1]
+        self._animation_duration = 0.02
+        self._previous_svg_file = ""  # Cache previous SVG file
+        
+        # Animation state
+        self.path = []
+        self.closed_shapes = OrderedDict()
+        self.svg_size = []
+        self.current_svg_file = ""
+        
+        # Shape animation state
+        self.all_anim = []
+        self.curr_count = 0
+        self.prev_shapes = []
+        self.curr_shape = []
 
-    def fill_up(self, shapes, color):
-        """Fill shapes with specified color using mesh rendering."""
-        MeshHandler.render_mesh(self.b, shapes, color, "mesh_opacity")
+    def fill_up(self, shapes: List[List[float]], color: List[float]) -> None:
+        """
+        Fill shapes with specified color using mesh rendering.
+        
+        Args:
+            shapes: List of shape point lists to fill
+            color: RGB or RGBA color to fill with
+        """
+        MeshHandler.render_mesh(self.widget, shapes, color, "mesh_opacity")
 
-    def fill_up_shapes(self, *args):
+    def fill_up_shapes(self, *args) -> None:
+        """Fill all shapes in the current SVG file."""
         for id_, closed_paths in self.closed_shapes.items():
-            c = self.closed_shapes[id_]["color"]
-            self.fill_up(closed_paths[id_ + "shapes"], c)
+            color = self.closed_shapes[id_]["color"]
+            self.fill_up(closed_paths[id_ + "shapes"], color)
     
-    def fill_up_shapes_anim(self, shapes, *args):
+    def fill_up_shapes_anim(self, shapes: List[Tuple[List[float], List[float]]], *args) -> None:
+        """Fill shapes during animation."""
         for shape in shapes:
-            c = shape[0]
-            self.fill_up([shape[1]], c)
+            color = shape[0]
+            self.fill_up([shape[1]], color)
     
-    def anim_on_comp(self, *args):
-        self.curr_count+=1
+    def anim_on_comp(self, *args) -> None:
+        """Handle completion of an animation in the sequence."""
+        self.curr_count += 1
         self.prev_shapes.append(self.curr_shape)
-        if self.curr_count<len(self.all_anim):
-            id_, a = self.all_anim[self.curr_count]
+        
+        if self.curr_count < len(self.all_anim):
+            id_, animation = self.all_anim[self.curr_count]
             setattr(self, "curr_id", id_)
             setattr(self, "curr_clr", self.closed_shapes[id_]["color"])
-            a.bind(on_progress=self.track_progress)
-            a.start(self.b)
+            
+            # Clear previous bindings and add new ones
+            animation.unbind(on_progress=self.track_progress)
+            animation.unbind(on_complete=self.anim_on_comp)
+            
+            animation.bind(on_progress=self.track_progress)
+            animation.bind(on_complete=self.anim_on_comp)
+            
+            animation.start(self.widget)
     
-    def shape_animate(self, svg_file, anim_config_list=[], on_complete=None):
-        """
-        svg_file: svg file name
-
-        anim_config_list: a list of dicts with keys id_ to animate and from_, the direction of animation
-
-        on_complete: optional function to call after total completion
-        """
-        self.draw(svg_file, from_shape_anim=True)
-        setattr(self.b, "mesh_opacity", 1)
-
-        self.all_anim = []
-        self.curr_count= 0
-        for i, config in enumerate(anim_config_list):
-            # setattr(self, "{}_".format(config["id_"]), config["id_"])
-            context = AnimationContext(
-                widget=self.b,
-                shape_id=config["id_"],
-                direction=config.get("from_", None),
-                transition=config.get("t", "out_sine"),
-                duration=config.get("d", .3),
-                closed_shapes=self.closed_shapes,
-                sw_size=self.sw_size,
-                svg_file=self.sf
-            )
-            anim_list = ShapeAnimator.setup_animation(self, context)
-
-            if anim_list:
-                anim = anim_list[0]
-                for a in anim_list[1:]:
-                    anim&= a
-                anim.bind(on_complete= self.anim_on_comp )
-                self.all_anim.append((config["id_"], anim))
-            else:
-                setattr(self, "curr_id", config["id_"])
-                setattr(self, "curr_clr", self.closed_shapes[config["id_"]]["color"])
-                self.track_progress()
-        
-        id_, a = self.all_anim[0]
-        setattr(self, "curr_id", id_)
-        setattr(self, "curr_clr", self.closed_shapes[id_]["color"])
-
-        a.cancel_all(self.b)
-        a.bind(on_progress=self.track_progress)
-        if on_complete:
-            self.all_anim[-1][1].bind(on_complete=on_complete)
-        
-        a.start(self.b)
-    
-    def track_progress(self, *args):
+    def track_progress(self, *args) -> None:
         """
         Track animation progress and update the canvas.
         
         Called during animation progress. Updates the current shape.
-        
-        Args:
-            *args: Animation callback arguments
-            
-        Returns:
-            None
         """
         id_ = getattr(self, "curr_id")
-        elements_list = getattr(self, "{}_tmp".format(id_))
+        elements_list = getattr(self, f"{id_}_tmp")
 
-        shape_list = SvgRenderer.collect_shape_points(elements_list, self.b, id_)
+        shape_list = SvgRenderer.collect_shape_points(elements_list, self.widget, id_)
         
-        # print(shape_list[:5])
-        self.b.canvas.clear()
+        self.widget.canvas.clear()
         self.curr_shape = (getattr(self, "curr_clr"), shape_list)
-        s = [*self.prev_shapes, self.curr_shape]
-        self.fill_up_shapes_anim(s)
+        shapes = [*self.prev_shapes, self.curr_shape]
+        self.fill_up_shapes_anim(shapes)
 
+    def update_canvas(self, *args, **kwargs) -> None:
+        """Update the canvas with the current drawing state."""
+        SvgRenderer.update_canvas(self.widget, self.path, self._line_color)
 
-    def draw(self, svg_file, animate=False, anim_type="seq", *args, **kwargs):
+    def draw(self, svg_file: str, animate: bool = False, 
+             anim_type: str = "seq", *args, **kwargs) -> None:
         """
-        Function to animate
+        Draw an SVG file onto the widget with optional animation.
         
-        Call this function with an svg file name to animate that svg
-        
-        ------------
-        Extra arguments:
-        
-        fill: Whether to fill the drawing at the end using same png, defaults true,
-         unexpected result if png with same name is not available
-        
-        line_width: Line width for drawing, default 2
-        
-        line_color: Line Color for drawing, default [0,0,0,1]
-        
-        dur: Duration of each small path drawing animation, default .02
-
-        anim_type: "seq"/"par" for sequence/parallel
+        Args:
+            svg_file: Path to the SVG file
+            animate: Whether to animate the drawing process
+            anim_type: Animation type - "seq" for sequential or "par" for parallel
+            
+        Keyword Args:
+            fill: Whether to fill the drawing (bool)
+            line_width: Width of lines (int)
+            line_color: Color of lines (list)
+            dur: Duration of each animation step (float)
+            from_shape_anim: Whether called from shape_animate (bool)
         """
-        self.fill = kwargs.get("fill", self._fill)
-        self.LINE_WIDTH = kwargs.get("line_width", self._LINE_WIDTH)
-        self.LINE_COLOR = kwargs.get("line_color", self._LINE_COLOR)
-        self.DUR = kwargs.get("dur", self._DUR)
+        # Process arguments
+        fill = kwargs.get("fill", self._fill)
+        line_width = kwargs.get("line_width", self._line_width)
+        line_color = kwargs.get("line_color", self._line_color)
+        duration = kwargs.get("dur", self._animation_duration)
         from_shape_anim = kwargs.get("from_shape_anim", False)
         anim_type = anim_type if anim_type in ("seq", "par") else "seq"
-
-        self.sf = svg_file
-        if self.sf != self.psf:
-            self.sw_size, path_strings = parse_svg(svg_file)
-
-            self.path = []
-            self.closed_shapes = OrderedDict()
-            # print("Starting========= {}".format(self.sf))
-            for path_string, id_, clr in path_strings:
-                # print(id_)
-                move_found = False
-                close_Found = False
-                tmp = []
-                self.closed_shapes[id_] = dict()
-                self.closed_shapes[id_][id_ + "paths"] = []
-                self.closed_shapes[id_][id_ + "shapes"] = []  # for drawing meshes
-                self.closed_shapes[id_]["color"] = clr
-                _path = parse_path(path_string)
-                for e in _path:
-                    # print(e)
-                    self.path.append(e)
-
-                    if isinstance(e, Close) or (isinstance(e, Move) and move_found):
-                        self.closed_shapes[id_][id_ + "paths"].append(tmp)
-                        move_found = False
-
-                    if isinstance(e, Move):  # shape started
-                        tmp = []
-                        move_found = True
-
-                    if not isinstance(e, Move) and move_found:
-                        tmp.append(e)
-
-                # print("============")
-
-            # for id_, closed_paths in self.closed_shapes.items():
-            #     print("========== id = {} =================".format(id_))
-            #     for s in closed_paths[id_+"paths"]:
-            #         print(s)
-            #     print("====================================\n")
-
-            self.psf = self.sf
-
-        anim_list = self._calc_paths(animate)
+        
+        # Set current values as instance attributes for other methods to access
+        self._fill = fill
+        self._line_width = line_width
+        self._line_color = line_color
+        self._animation_duration = duration
+        self.current_svg_file = svg_file
+        
+        # Only process SVG if it's different from the previous one
+        if svg_file != self._previous_svg_file:
+            self.svg_size, self.closed_shapes, self.path = DrawingManager.process_path_data(svg_file)
+            self._previous_svg_file = svg_file
+        
+        # Calculate the paths and get animation list
+        anim_list = DrawingManager.calculate_paths(
+            self.widget, self.closed_shapes, self.svg_size, 
+            svg_file, animate, line_width, duration
+        )
+        
+        # Handle animation and rendering
         if not from_shape_anim:
             if animate:
-                anim = anim_list[0]
-                for a in anim_list[1:]:
-                    if anim_type=="seq":
-                        anim += a
-                    else: anim &= a
-
-            if self.fill:
-                setattr(self.b, "mesh_opacity", 0 if animate else 1)
-
-                if animate:
-                    fill_anim = Animation(d=0.4, mesh_opacity=1)
-                    fill_anim.bind(on_progress=self.fill_up_shapes)
-                    anim += fill_anim
-
-            if animate:
-                anim.cancel_all(self.b)
-                anim.bind(on_progress=self.update_canvas)
-                anim.start(self.b)
+                # Combine animations according to anim_type
+                anim = AnimationHandler.create_animation_sequence(
+                    anim_list, sequential=(anim_type == "seq")
+                )
+                
+                # Add fill animation if needed
+                if fill:
+                    setattr(self.widget, "mesh_opacity", 0)
+                    anim = AnimationHandler.add_fill_animation(
+                        anim, self.widget, self.fill_up_shapes
+                    )
+                
+                # Start the animation
+                AnimationHandler.prepare_and_start_animation(
+                    anim, self.widget, self.update_canvas
+                )
             else:
-                if not self.fill:
+                # Static rendering
+                if not fill:
                     self.update_canvas()
                 else:
-                    self.b.canvas.clear()
+                    self.widget.canvas.clear()
                     self.fill_up_shapes()
 
-    def _calc_paths(self, animate):
+    def shape_animate(self, svg_file: str, anim_config_list: List[Dict] = None, 
+                     on_complete: Callable = None) -> None:
+        """
+        Animate individual shapes in an SVG file.
+        
+        Args:
+            svg_file: Path to the SVG file
+            anim_config_list: List of animation configurations, each containing:
+                - id_: Shape ID to animate
+                - from_: Direction of animation
+                - d: Duration (optional)
+                - t: Transition (optional)
+            on_complete: Function to call when all animations complete
+        """
+        if anim_config_list is None:
+            anim_config_list = []
+            
+        # First draw the SVG without animation
+        self.draw(svg_file, from_shape_anim=True)
+        setattr(self.widget, "mesh_opacity", 1)
 
-        line_count = 0
-        bezier_count = 0
-        anim_list = []
-        for id_, closed_paths in self.closed_shapes.items():
-            # TODO: Support for other svg shapes like Arc, Circle, Text etc.
-
-            for s in closed_paths[id_ + "paths"]:
-                tmp = []
-                for e in s:
-
-                    if isinstance(e, Line):
-                        lp = line_points(
-                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
-                        )
-                        setattr(self.b, "line{}_start_x".format(line_count), lp[0])
-                        setattr(self.b, "line{}_start_y".format(line_count), lp[1])
-                        setattr(
-                            self.b,
-                            "line{}_end_x".format(line_count),
-                            lp[0] if animate else lp[2],
-                        )
-                        setattr(
-                            self.b,
-                            "line{}_end_y".format(line_count),
-                            lp[1] if animate else lp[3],
-                        )
-                        setattr(
-                            self.b,
-                            "line{}_width".format(line_count),
-                            1 if animate else self.LINE_WIDTH,
-                        )
-
-                        if animate:
-                            anim_list.append(
-                                Animation(
-                                    d=self.DUR,
-                                    **dict(
-                                        zip(
-                                            [
-                                                "line{}_end_x".format(line_count),
-                                                "line{}_end_y".format(line_count),
-                                                "line{}_width".format(line_count),
-                                            ],
-                                            [lp[2], lp[3], self.LINE_WIDTH],
-                                        )
-                                    ),
-                                )
-                            )
-                        line_count += 1
-
-                        tmp.extend(lp)
-                    if isinstance(e, CubicBezier):
-                        bp = bezier_points(
-                            e, [*self.b.size], [*self.b.pos], [*self.sw_size], self.sf
-                        )
-                        setattr(self.b, "bezier{}_start_x".format(bezier_count), bp[0])
-                        setattr(self.b, "bezier{}_start_y".format(bezier_count), bp[1])
-                        setattr(
-                            self.b,
-                            "bezier{}_control1_x".format(bezier_count),
-                            bp[0] if animate else bp[2],
-                        )
-                        setattr(
-                            self.b,
-                            "bezier{}_control1_y".format(bezier_count),
-                            bp[1] if animate else bp[3],
-                        )
-                        setattr(
-                            self.b,
-                            "bezier{}_control2_x".format(bezier_count),
-                            bp[0] if animate else bp[4],
-                        )
-                        setattr(
-                            self.b,
-                            "bezier{}_control2_y".format(bezier_count),
-                            bp[1] if animate else bp[5],
-                        )
-                        setattr(
-                            self.b,
-                            "bezier{}_end_x".format(bezier_count),
-                            bp[0] if animate else bp[6],
-                        )
-                        setattr(
-                            self.b,
-                            "bezier{}_end_y".format(bezier_count),
-                            bp[1] if animate else bp[7],
-                        )
-                        setattr(
-                            self.b,
-                            "bezier{}_width".format(bezier_count),
-                            1 if animate else self.LINE_WIDTH,
-                        )
-
-                        if animate:
-                            anim_list.append(
-                                Animation(
-                                    d=self.DUR,
-                                    **dict(
-                                        zip(
-                                            [
-                                                "bezier{}_control1_x".format(
-                                                    bezier_count
-                                                ),
-                                                "bezier{}_control1_y".format(
-                                                    bezier_count
-                                                ),
-                                                "bezier{}_control2_x".format(
-                                                    bezier_count
-                                                ),
-                                                "bezier{}_control2_y".format(
-                                                    bezier_count
-                                                ),
-                                                "bezier{}_end_x".format(bezier_count),
-                                                "bezier{}_end_y".format(bezier_count),
-                                                "bezier{}_width".format(bezier_count),
-                                            ],
-                                            [
-                                                bp[2],
-                                                bp[3],
-                                                bp[4],
-                                                bp[5],
-                                                bp[6],
-                                                bp[7],
-                                                self.LINE_WIDTH,
-                                            ],
-                                        )
-                                    ),
-                                )
-                            )
-                        bezier_count += 1
-
-                        tmp.extend(
-                            get_all_points(
-                                (bp[0], bp[1]),
-                                (bp[2], bp[3]),
-                                (bp[4], bp[5]),
-                                (bp[6], bp[7]),
-                            )
-                        )
-
-                if tmp not in closed_paths[id_ + "shapes"]:
-                    closed_paths[id_ + "shapes"].append(tmp)
-
-        # for id_, closed_paths in self.closed_shapes.items():
-        #     print("========== id = {} =================".format(id_))
-        #     for s in closed_paths[id_+"shapes"]:
-        #         print(s[:5])
-        #     print("====================================\n")
-        # uncomment krna hai
-        # if not shape_anim:
-        # print(anim_list)
-        return anim_list
-
-    def update_canvas(self, *args, **kwargs):
-        """Update the canvas with the current drawing state."""
-        SvgRenderer.update_canvas(self.b, self.path, self.LINE_COLOR)
+        # Initialize animation state
+        self.all_anim = []
+        self.curr_count = 0
+        self.prev_shapes = []
+        self.curr_shape = []
+        
+        # Prepare animations using AnimationHandler
+        self.all_anim = AnimationHandler.prepare_shape_animations(
+            self,
+            self.widget,
+            anim_config_list,
+            self.closed_shapes,
+            self.svg_size,
+            self.current_svg_file
+        )
+        
+        # Start animations if any are ready
+        if self.all_anim:
+            id_, animation = self.all_anim[0]
+            setattr(self, "curr_id", id_)
+            setattr(self, "curr_clr", self.closed_shapes[id_]["color"])
+            
+            # Attach progress tracking
+            animation.bind(on_progress=self.track_progress)
+            
+            # Attach completion callback if provided
+            if on_complete and self.all_anim:
+                self.all_anim[-1][1].bind(on_complete=on_complete)
+            
+            # Start the animation
+            animation.cancel_all(self.widget)
+            animation.bind(on_complete=self.anim_on_comp)
+            animation.start(self.widget)
+        elif anim_config_list:
+            # In case there are config items but no animations were created
+            if on_complete:
+                on_complete()

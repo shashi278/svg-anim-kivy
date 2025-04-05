@@ -6,6 +6,7 @@ Core class and main API
 from collections import OrderedDict
 from typing import List, Tuple, Dict, Any, Callable
 
+from kivg.animation import Animation
 from kivg.drawing_manager import DrawingManager
 from kivg.animation_handler import AnimationHandler
 from kivg.mesh import MeshHandler
@@ -172,6 +173,7 @@ class Kivg:
                 )
             else:
                 # Static rendering
+                Animation.cancel_all(self.widget)
                 if not fill:
                     self.update_canvas()
                 else:

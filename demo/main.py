@@ -1,6 +1,6 @@
 from kivy.app import App
 from kivy.lang import Builder
-from kivy.clock import Clock
+from kivy.clock import mainthread
 
 from kivg import Kivg
 
@@ -73,8 +73,6 @@ BoxLayout:
 
 """
 
-import threading
-
 
 class KivgDemo(App):
     def build(self):
@@ -82,6 +80,7 @@ class KivgDemo(App):
         self.s = Kivg(self.root.ids.svg_area)
         return self.root
 
+    @mainthread
     def show_button_icon(self, *args):
         grid = self.root.ids.button_area
         for b in grid.children:
@@ -96,8 +95,7 @@ class KivgDemo(App):
         s.draw(icon, fill=False, line_width=1)
 
     def on_start(self):
-        t = threading.Thread(target=self.show_button_icon)
-        Clock.schedule_once(lambda *args: t.start())
+        self.show_button_icon()
 
     def animate(self, svg_file):
         self.s.draw(svg_file, animate=True, fill=True, line_width=1)

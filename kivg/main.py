@@ -10,6 +10,7 @@ from kivg.animation.kivy_animation import Animation
 from kivg.drawing.manager import DrawingManager
 from kivg.animation.handler import AnimationHandler
 from kivg.mesh_handler import MeshHandler
+from kivg.svg_elements import SVGElement
 from kivg.svg_renderer import SvgRenderer
 
 
@@ -56,12 +57,14 @@ class Kivg:
             shapes: List of shape point lists to fill
             color: RGB or RGBA color to fill with
         """
+        print("shapes", shapes)
         MeshHandler.render_mesh(self.widget, shapes, color, "mesh_opacity")
 
     def fill_up_shapes(self, *args) -> None:
         """Fill all shapes in the current SVG file."""
         for id_, closed_paths in self.closed_shapes.items():
             color = self.closed_shapes[id_]["color"]
+            print("calling fill_up")
             self.fill_up(closed_paths[id_ + "shapes"], color)
     
     def fill_up_shapes_anim(self, shapes: List[Tuple[List[float], List[float]]], *args) -> None:
@@ -144,6 +147,9 @@ class Kivg:
         # Only process SVG if it's different from the previous one
         if svg_file != self._previous_svg_file:
             self.svg_size, self.closed_shapes, self.path = DrawingManager.process_path_data(svg_file)
+            print(f"SVG size: {self.svg_size}")
+            print(f"Closed shapes: {self.closed_shapes}")
+            print(f"Path data: {self.path}")
             self._previous_svg_file = svg_file
         
         # Calculate the paths and get animation list
@@ -174,11 +180,17 @@ class Kivg:
             else:
                 # Static rendering
                 Animation.cancel_all(self.widget)
-                if not fill:
-                    self.update_canvas()
-                else:
-                    self.widget.canvas.clear()
-                    self.fill_up_shapes()
+                # for element in svg_elements:
+                #     print("Rendering element:", element)
+                #     canvas = self.widget.canvas
+                #     canvas.clear()
+                #     element.render(canvas, self.widget.size, 
+                #                    self.widget.pos, self.svg_size)
+                # if not fill:
+                self.update_canvas()
+                # else:
+                    # self.widget.canvas.clear()
+                    # self.fill_up_shapes()
 
     def shape_animate(self, svg_file: str, anim_config_list: List[Dict] = None, 
                      on_complete: Callable = None) -> None:
@@ -238,3 +250,77 @@ class Kivg:
             # In case there are config items but no animations were created
             if on_complete:
                 on_complete()
+                
+    def animate_element_along_path(self, element_id: str, path_id: str, duration: float = 2.0, 
+                                  repeat: bool = False, rotate: bool = False,
+                                  callback: Callable = None, keep_others: bool = True,
+                                  show_path: bool = True) -> None:
+        """
+        Animate an SVG element along a path.
+        
+        This method allows any SVG element (Circle, Rectangle, Ellipse, etc.) to be 
+        animated along a path defined in the current SVG file.
+        
+        Args:
+            element_id: ID of the element to animate
+            path_id: ID of the path to follow
+            duration: Animation duration in seconds
+            repeat: Whether to repeat the animation
+            rotate: Whether to rotate the element to follow the path direction
+            callback: Function to call when animation completes
+            keep_others: Whether to keep rendering other elements during animation
+            show_path: Whether to show the full path during animation
+        """
+        # Import here to avoid circular imports
+        from kivg.animation.path_tracker import PathTracker
+        
+        # Ensure we have an SVG loaded
+        if not self.current_svg_file or not self.closed_shapes:
+            print("No SVG file loaded. Call draw() first.")
+            return None
+        
+        # Use the closed_shapes dictionary directly to find elements
+        element = None
+        path_data = None
+        
+        # Find the element by ID
+        if element_id in self.closed_shapes and 'element' in self.closed_shapes[element_id]:
+            element = self.closed_shapes[element_id]['element']
+        else:
+            print(f"Element with ID '{element_id}' not found in SVG.")
+            return None
+        
+        # Find the path by ID
+        if path_id in self.closed_shapes:
+            # Check if it's a Path element
+            if hasattr(self.closed_shapes[path_id]['element'], 'd'):
+                path_data = self.closed_shapes[path_id]['element'].d
+            # Otherwise try to get the 'd' attribute directly
+            elif 'd' in self.closed_shapes[path_id]:
+                path_data = self.closed_shapes[path_id]['d']
+        
+        if not path_data:
+            print(f"Path with ID '{path_id}' not found in SVG or is not a path element.")
+            return None
+        
+        print(f"Animating {element_id} along path {path_id}")
+        print(f"Element: {element}")
+        print(f"Path data: {path_data}")
+        
+        # Get all other elements to render during animation
+        other_elements = []
+        if keep_others:
+            for id_, data in self.closed_shapes.items():
+                if id_ != element_id and 'element' in data:
+                    other_elements.append(data['element'])
+        
+        # Clear the canvas for animation
+        self.widget.canvas.clear()
+        
+        # Start the animation
+        return PathTracker.animate_element_along_path(
+            element, path_data, self.widget, self.svg_size, 
+            duration, repeat, rotate, callback, 
+            other_elements if keep_others else None,
+            show_path
+        )

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="600">
+    <!-- Circle -->
+    <circle cx="150" cy="100" r="50" fill="rgb(255, 0, 0)" stroke="rgb(255, 255, 255)" stroke-width="2" />
+    
+    <!-- Rectangle -->
+    <rect x="250" y="50" width="100" height="100" stroke="rgb(255, 255, 255)" stroke-width="1" />
+    
+    <!-- Rounded Rectangle -->
+    <rect x="400" y="50" width="100" height="100" rx="20" ry="20" fill="rgb(0, 255, 0)" stroke-width="2" />
+    
+    <!-- Ellipse -->
+    <ellipse cx="600" cy="100" rx="75" ry="50" fill="" stroke="rgb(255, 255, 255)" stroke-width="2" />
+    
+    <!-- Path with line segments -->
+    <path d="M100,250 L200,300 L150,350 Z" fill="rgb(255, 255, 0)" stroke="rgb(255, 255, 255)" stroke-width="2" />
+    
+    <!-- Path with bezier curve -->
+    <!-- <path d="M300,250 C350,200 450,200 500,250 S600,350 650,300" fill="none" stroke="rgb(255, 165, 0)" stroke-width="3" /> -->
+</svg>

@@ -1,17 +1,18 @@
 """
 SVG rendering functionality for Kivg.
 """
-from kivy.graphics import Line as KivyLine, Color
+from kivy.graphics import Line as KivyLine, Color, Ellipse as KivyEllipse, Rectangle as KivyRectangle
 from svg.path.path import Line, CubicBezier, Close, Move
 from typing import Dict, List, Tuple, Any, Optional
 
 from .path_utils import get_all_points
+from .svg_elements import SVGElement, Circle, Rectangle, Ellipse
 
 class SvgRenderer:
     """Handles rendering of SVG paths to Kivy canvas."""
     
     @staticmethod
-    def update_canvas(widget, path_elements: List[Line | CubicBezier], line_color: List[float]) -> None:
+    def update_canvas(widget, path_elements: List[Any], line_color: List[float]) -> None:
         """
         Update the canvas with the current path elements.
         
@@ -40,6 +41,12 @@ class SvgRenderer:
                 elif isinstance(element, CubicBezier):
                     SvgRenderer._draw_bezier(widget, bezier_count)
                     bezier_count += 1
+                    
+                elif isinstance(element, SVGElement):
+                    # Render SVG elements using their own render method
+                    element.render(widget.canvas,
+                                  widget.size, widget.pos,
+                                  getattr(widget, "svg_size", [100, 100]))
     
     @staticmethod
     def _draw_line(widget, line_index: int) -> None:
@@ -116,3 +123,20 @@ class SvgRenderer:
                     )
                     bezier_count += 1
         return shape_list
+                    
+    @staticmethod
+    def render_svg_elements(canvas, elements: List[SVGElement], 
+                           size: Tuple[float, float], pos: Tuple[float, float], 
+                           svg_size: List[float]) -> None:
+        """
+        Render multiple SVG elements to a canvas.
+        
+        Args:
+            canvas: Kivy canvas to render to
+            elements: List of SVG elements to render
+            size: Size of the widget as (width, height)
+            pos: Position of the widget as (x, y)
+            svg_size: Size of the SVG as [width, height]
+        """
+        for element in elements:
+            element.render(canvas, size, pos, svg_size)

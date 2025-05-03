@@ -53,7 +53,7 @@ BoxLayout:
             svg_icon: "icons/text.svg"
         
         MYMDIconButton:
-            svg_icon: "icons/twitter2.svg"
+            svg_icon: "icons/svg_elements_demo.svg"
         
         MYMDIconButton:
             svg_icon: "icons/google3.svg"
